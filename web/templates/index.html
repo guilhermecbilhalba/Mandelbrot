@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandelbrot - Python + C</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+        
+        .tech-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 3px 10px;
+            border-radius: 15px;
+            margin: 3px;
+            font-size: 0.8em;
+        }
+        
+        .content {
+            padding: 15px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9em;
+        }
+        
+        .control-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .preset-btn {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        .display {
+            background: #000;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #mandelbrot-img {
+            max-width: 100%;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        #mandelbrot-img.visible {
+            display: block;
+        }
+        
+        .placeholder {
+            text-align: center;
+            color: #888;
+        }
+        
+        .placeholder.hidden {
+            display: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            color: white;
+        }
+        
+        .loading.visible {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 15px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .presets {
+            margin-top: 15px;
+        }
+        
+        .presets h3 {
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔮 Fractal de Mandelbrot</h1>
+            <p>Integração Python + C</p>
+            <div>
+                <span class="tech-badge">🐍 Python</span>
+                <span class="tech-badge">⚡ C</span>
+                <span class="tech-badge">🔗 ctypes</span>
+            </div>
+        </header>
+        
+        <div class="content">
+            <div class="control-group">
+                <label>Largura (pixels)</label>
+                <input type="number" id="width" value="600">
+            </div>
+            
+            <div class="control-group">
+                <label>Altura (pixels)</label>
+                <input type="number" id="height" value="400">
+            </div>
+            
+            <div class="control-group">
+                <label>X Mínimo</label>
+                <input type="number" id="x_min" value="-2.5" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>X Máximo</label>
+                <input type="number" id="x_max" value="1.5" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>Y Mínimo</label>
+                <input type="number" id="y_min" value="-2.0" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>Y Máximo</label>
+                <input type="number" id="y_max" value="2.0" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>Iterações Máximas</label>
+                <input type="number" id="max_iter" value="100">
+            </div>
+            
+            <button class="btn" onclick="generateMandelbrot()">
+                🎨 Gerar Fractal
+            </button>
+            
+            <div class="presets">
+                <h3>Configurações Pré-definidas</h3>
+                <button class="preset-btn" onclick="loadPreset(0)">🌍 Visão Completa</button>
+                <button class="preset-btn" onclick="loadPreset(1)">🌀 Espiral</button>
+                <button class="preset-btn" onclick="loadPreset(2)">🔬 Zoom Profundo</button>
+            </div>
+            
+            <div class="display">
+                <div id="placeholder" class="placeholder">
+                    <h3>👆 Configure os parâmetros e clique em Gerar</h3>
+                </div>
+                
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Calculando fractal...</p>
+                </div>
+                
+                <img id="mandelbrot-img" alt="Fractal de Mandelbrot">
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let presets = [];
+        
+        fetch('/presets')
+            .then(r => r.json())
+            .then(data => { presets = data; });
+        
+        function loadPreset(index) {
+            const preset = presets[index];
+            if (!preset) return;
+            
+            document.getElementById('x_min').value = preset.x_min;
+            document.getElementById('x_max').value = preset.x_max;
+            document.getElementById('y_min').value = preset.y_min;
+            document.getElementById('y_max').value = preset.y_max;
+            document.getElementById('max_iter').value = preset.max_iter;
+            
+            generateMandelbrot();
+        }
+        
+        function generateMandelbrot() {
+            const params = {
+                width: parseInt(document.getElementById('width').value),
+                height: parseInt(document.getElementById('height').value),
+                x_min: parseFloat(document.getElementById('x_min').value),
+                x_max: parseFloat(document.getElementById('x_max').value),
+                y_min: parseFloat(document.getElementById('y_min').value),
+                y_max: parseFloat(document.getElementById('y_max').value),
+                max_iter: parseInt(document.getElementById('max_iter').value)
+            };
+            
+            document.getElementById('placeholder').classList.add('hidden');
+            document.getElementById('mandelbrot-img').classList.remove('visible');
+            document.getElementById('loading').classList.add('visible');
+            
+            fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Erro ao gerar fractal');
+                return response.blob();
+            })
+            .then(blob => {
+                const img = document.getElementById('mandelbrot-img');
+                img.src = URL.createObjectURL(blob);
+                img.classList.add('visible');
+                document.getElementById('loading').classList.remove('visible');
+            })
+            .catch(error => {
+                alert('Erro: ' + error.message);
+                document.getElementById('loading').classList.remove('visible');
+                document.getElementById('placeholder').classList.remove('hidden');
+            });
+        }
+    </script>
+</body>
+</html>
